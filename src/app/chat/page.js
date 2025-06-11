@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import TextareaAutosize from 'react-textarea-autosize';
 import Markdown from 'markdown-to-jsx';
@@ -17,7 +16,13 @@ const SendIcon = ({ className }) => <svg className={className} viewBox="0 0 24 2
 const BotIcon = () => <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] flex items-center justify-center flex-shrink-0"><SparkleIcon/></div>;
 const SparkleIcon = () => <svg className="h-5 w-5" strokeWidth="2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#FFFFFF"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" stroke="currentColor" strokeLinejoin="round"/><path d="M5 2L6 5L9 6L6 7L5 10L4 7L1 6L4 5L5 2Z" stroke="currentColor" strokeLinejoin="round"/><path d="M19 2L20 5L23 6L20 7L19 10L18 7L15 6L18 5L19 2Z" stroke="currentColor" strokeLinejoin="round"/></svg>;
 
-const chatHistory = [ { id: 1, title: "Understanding my plan budget..." } ];
+const loadSessions = () => {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('cm_sessions');
+    if (stored) return JSON.parse(stored);
+  }
+  return [{ id: Date.now(), title: 'New Chat', messages: [] }];
+};
 const promptStarters = [ { title: "Explain my budget", subtitle: "in simple terms" }, { title: "Help me draft a letter", subtitle: "to my doctor or provider" }, { title: "What are common supports for...", subtitle: "autism, cerebral palsy, etc." }, { title: "How do I prepare?", subtitle: "for a plan review meeting" } ];
 const commonRequests = [ { title: "Review My Plan", template: "I need help preparing for my upcoming NDIS plan review." }, { title: "Generate Incident Report", template: "I need to generate an incident report." }, ];
 
@@ -30,9 +35,19 @@ export default function ChatPage() {
   const prompt = searchParams.get('prompt');
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [sessions, setSessions] = useState(loadSessions());
+  const [currentSessionId, setCurrentSessionId] = useState(
+    loadSessions()[0].id
+  );
+  const [messages, setMessages] = useState(() => {
+    const sess = loadSessions()[0];
+    return sess.messages || [];
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
@@ -40,6 +55,25 @@ export default function ChatPage() {
       setInputValue(prompt);
     }
   }, [prompt]);
+
+  useEffect(() => {
+    const stored = loadSessions();
+    setSessions(stored);
+    setCurrentSessionId(stored[stored.length - 1].id);
+    setMessages(stored[stored.length - 1].messages || []);
+  }, []);
+
+  useEffect(() => {
+    setSessions(prev =>
+      prev.map(s => (s.id === currentSessionId ? { ...s, messages } : s))
+    );
+  }, [messages, currentSessionId]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cm_sessions', JSON.stringify(sessions));
+    }
+  }, [sessions]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -53,6 +87,10 @@ export default function ChatPage() {
 
     const userMessage = { role: 'user', content: trimmedInput };
     const newMessages = [...messages, userMessage];
+    if (messages.length === 0) {
+      const title = trimmedInput.slice(0, 30) + (trimmedInput.length > 30 ? '...' : '');
+      setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title } : s));
+    }
     // Add placeholder assistant message for streaming updates
     setMessages([...newMessages, { role: 'assistant', content: '' }]);
     setInputValue('');
@@ -124,10 +162,62 @@ export default function ChatPage() {
 
   const handlePromptClick = (text) => { setInputValue(text); };
 
+  const handleNewChat = () => {
+    const newSession = { id: Date.now(), title: 'New Chat', messages: [] };
+    setSessions(prev => [...prev, newSession]);
+    setCurrentSessionId(newSession.id);
+    setMessages([]);
+  };
+
+  const handleSelectSession = (id) => {
+    const session = sessions.find(s => s.id === id);
+    if (session) {
+      setCurrentSessionId(id);
+      setMessages(session.messages || []);
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setInputValue(v => (v ? v + '\n' : '') + reader.result);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const text = Array.from(event.results)
+        .map(r => r[0].transcript)
+        .join(' ');
+      setInputValue(v => (v ? v + ' ' + text : text));
+    };
+    recognition.onend = () => setIsRecording(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+  };
+
   return (
     <div className="flex h-screen bg-background text-primary-text font-sans">
       <aside className="w-80 bg-[#111111] p-4 flex flex-col border-r border-white/10">
-        <button className="flex items-center justify-center gap-2 w-full p-3 rounded-full bg-primary-text text-background font-semibold hover:bg-white/80 transition mb-6">
+        <button onClick={handleNewChat} className="flex items-center justify-center gap-2 w-full p-3 rounded-full bg-primary-text text-background font-semibold hover:bg-white/80 transition mb-6">
             <NewChatIcon />
             New Chat
         </button>
@@ -137,7 +227,9 @@ export default function ChatPage() {
         </div>
         <div className="flex-1 mt-6 overflow-y-auto">
             <h2 className="px-2 mb-2 text-sm font-semibold text-secondary-text">Recent</h2>
-            <nav className="flex flex-col mb-6 space-y-1"> {chatHistory.map(chat => ( <a key={chat.id} href="#" className="p-2 text-sm truncate rounded-lg text-secondary-text hover:bg-white/5 hover:text-primary-text transition-colors">{chat.title}</a> ))} </nav>
+            <nav className="flex flex-col mb-6 space-y-1"> {sessions.map(chat => (
+                <button key={chat.id} onClick={() => handleSelectSession(chat.id)} className={`p-2 text-sm truncate rounded-lg transition-colors ${chat.id === currentSessionId ? 'bg-white/10 text-primary-text' : 'text-secondary-text hover:bg-white/5 hover:text-primary-text'}`}>{chat.title}</button>
+            ))} </nav>
             <h2 className="px-2 mb-2 text-sm font-semibold text-secondary-text">Common Requests</h2>
             <nav className="flex flex-col space-y-1"> {commonRequests.map(request => ( <button key={request.title} onClick={() => handlePromptClick(request.template)} className="p-2 text-sm text-left truncate rounded-lg text-secondary-text hover:bg-white/5 hover:text-primary-text transition-colors">{request.title}</button>))} </nav>
         </div>
@@ -182,8 +274,9 @@ export default function ChatPage() {
 
         <div className="p-4 w-full max-w-4xl mx-auto">
             <div className="group flex items-end gap-2 border-2 border-secondary-text rounded-2xl p-2 transition-all duration-300 focus-within:border-primary-text hover:border-primary-text/70">
-                <button className="p-2 transition-colors text-secondary-text hover:text-primary-text"><PaperclipIcon /></button>
-                <button className="p-2 transition-colors text-secondary-text hover:text-primary-text"><MicIcon /></button>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                <button onClick={() => fileInputRef.current?.click()} className="p-2 transition-colors text-secondary-text hover:text-primary-text"><PaperclipIcon /></button>
+                <button onClick={toggleRecording} className={`p-2 transition-colors ${isRecording ? 'text-primary' : 'text-secondary-text hover:text-primary-text'}`}><MicIcon /></button>
                 <TextareaAutosize placeholder="Ask anything..." className="flex-1 w-full px-2 py-2 bg-transparent focus:outline-none placeholder:text-secondary-text resize-none" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyDown} maxRows={5}/>
                 <button onClick={handleSendMessage} disabled={isLoading} className="p-3 transition-all duration-300 bg-primary-text rounded-full text-background self-end group-hover:bg-primary group-hover:text-background group-focus-within:bg-primary group-focus-within:bg-background disabled:bg-gray-500"> <SendIcon className="h-5 w-5"/> </button>
             </div>
