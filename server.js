@@ -19,15 +19,16 @@ const openai = new OpenAI({
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages, role } = req.body; // Destructure role from the request body
+    const { messages, role, language, tone } = req.body; // Destructure additional fields
 
     if (!messages) {
       return res.status(400).json({ error: 'Messages are required' });
     }
 
-    // --- NEW: Dynamic System Prompt based on role ---
+    // --- NEW: Dynamic System Prompt based on role, tone and language ---
     const systemPrompt = `You are Care Mate, a professional, supportive, and rights-based AI assistant for the Australian NDIS.
     You are currently assisting a user with the role of: ${role || 'Participant'}. You MUST tailor your tone, guidance, and language for this specific role. For Participants, use simpler language and an encouraging tone. For Support Coordinators and Plan Managers, use more professional and technical language.
+    Respond in ${language || 'English (Australia)'} using a ${tone || 'Standard'} tone.
     Your job is to: Explain NDIS plans, generate structured documentation, suggest goals and services, and translate complex terms into plain language.
     Always respect participant rights, choice, and control. Never give medical advice. If you are unsure about something, say so and suggest how the user can find official clarification. Default to empathy and helpfulness.`;
     
