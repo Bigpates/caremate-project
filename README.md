@@ -34,3 +34,7 @@ npm test
 ```
 
 This runs all tests under the `__tests__` directory.
+
+## Continuous Integration
+
+This repository includes a GitHub Actions workflow that runs `npm ci` and `npm test` on every push and pull request. When branch protection is enabled, a failing workflow will prevent the merge.
