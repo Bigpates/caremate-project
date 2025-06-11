@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import SettingsModal from '@/components/SettingsModal';
+import { useChatSettings } from '@/context/ChatSettingsContext';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import TextareaAutosize from 'react-textarea-autosize';
@@ -25,6 +27,7 @@ const PromptBubble = ({ title, subtitle, onClick }) => ( <button onClick={onClic
 
 export default function ChatPage() {
   const searchParams = useSearchParams();
+  const { language, tone } = useChatSettings();
   const role = searchParams.get('role') || 'Participant';
   const goal = searchParams.get('goal') || 'Draft a progress letter';
   const prompt = searchParams.get('prompt');
@@ -34,6 +37,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const chatContainerRef = useRef(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (prompt) {
@@ -63,7 +67,7 @@ export default function ChatPage() {
       const response = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, role })
+        body: JSON.stringify({ messages: newMessages, role, language, tone })
       });
 
       if (!response.ok) {
@@ -125,6 +129,8 @@ export default function ChatPage() {
   const handlePromptClick = (text) => { setInputValue(text); };
 
   return (
+    <>
+    <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     <div className="flex h-screen bg-background text-primary-text font-sans">
       <aside className="w-80 bg-[#111111] p-4 flex flex-col border-r border-white/10">
         <button className="flex items-center justify-center gap-2 w-full p-3 rounded-full bg-primary-text text-background font-semibold hover:bg-white/80 transition mb-6">
@@ -142,7 +148,7 @@ export default function ChatPage() {
             <nav className="flex flex-col space-y-1"> {commonRequests.map(request => ( <button key={request.title} onClick={() => handlePromptClick(request.template)} className="p-2 text-sm text-left truncate rounded-lg text-secondary-text hover:bg-white/5 hover:text-primary-text transition-colors">{request.title}</button>))} </nav>
         </div>
         <div className="pt-4 border-t border-white/10">
-            <button className="w-full flex items-center gap-2 p-2 text-sm rounded-lg text-secondary-text hover:bg-white/5 hover:text-primary-text transition-colors"> <SettingsIcon /> Settings </button>
+            <button onClick={() => setIsSettingsOpen(true)} className="w-full flex items-center gap-2 p-2 text-sm rounded-lg text-secondary-text hover:bg-white/5 hover:text-primary-text transition-colors"> <SettingsIcon /> Settings </button>
         </div>
       </aside>
 
@@ -192,5 +198,6 @@ export default function ChatPage() {
         </div>
       </main>
     </div>
+    </>
   );
 }
