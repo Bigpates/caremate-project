@@ -2,6 +2,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import SmoothScroll from '@/components/SmoothScroll';
+import { ChatSettingsProvider } from '@/context/ChatSettingsContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -14,8 +15,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Header />
-        <SmoothScroll>{children}</SmoothScroll>
+        <ChatSettingsProvider>
+          <Header />
+          <SmoothScroll>{children}</SmoothScroll>
+        </ChatSettingsProvider>
       </body>
     </html>
   );

@@ -1,10 +1,4 @@
-require('dotenv').config();
-const express = require('express');
-const OpenAI = require('openai');
-const cors = require('cors');
 
-const app = express();
-const port = 3001;
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
@@ -69,3 +63,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+

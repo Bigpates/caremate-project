@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useChatSettings } from '@/context/ChatSettingsContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- ICONS ---
@@ -11,7 +12,10 @@ const ProfileIcon = () => <svg className="h-5 w-5" fill="none" viewBox="0 0 24 2
 
 
 const SettingsModal = ({ isOpen, onClose }) => {
+  const { language: globalLanguage, setLanguage: setGlobalLanguage, tone: globalTone, setTone: setGlobalTone } = useChatSettings();
   const [activeTab, setActiveTab] = useState('profile');
+  const [language, setLanguage] = useState(globalLanguage);
+  const [tone, setTone] = useState(globalTone);
 
   // This check is important to allow the exit animation to complete
   if (!isOpen) {
@@ -84,15 +88,35 @@ const SettingsModal = ({ isOpen, onClose }) => {
                          <div>
                            <label className="font-semibold text-primary-text">Language Output</label>
                            <p className="text-xs text-secondary-text mb-2">Choose the primary language for AI responses.</p>
-                           <select className="mt-1 bg-[#1A1A1A] border border-white/10 rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-primary"><option>English (Australia)</option></select>
+                           <select
+                             value={language}
+                             onChange={(e) => {
+                               setLanguage(e.target.value);
+                               setGlobalLanguage(e.target.value);
+                             }}
+                             className="mt-1 bg-[#1A1A1A] border border-white/10 rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-primary"
+                           >
+                             <option>English (Australia)</option>
+                             <option>Spanish</option>
+                             <option>French</option>
+                           </select>
                          </div>
                          <div>
                            <label className="font-semibold text-primary-text">AI Response Tone</label>
                            <p className="text-xs text-secondary-text mb-2">Select the tone that best suits your needs.</p>
                            <div className="flex gap-2 mt-2">
-                             <button className="flex-1 p-2 rounded-lg bg-primary text-background font-semibold">Simple</button>
-                             <button className="flex-1 p-2 rounded-lg bg-[#1A1A1A] text-secondary-text hover:border-primary border border-transparent transition-colors">Standard</button>
-                             <button className="flex-1 p-2 rounded-lg bg-[#1A1A1A] text-secondary-text hover:border-primary border border-transparent transition-colors">Professional</button>
+                             {['Simple', 'Standard', 'Professional'].map(t => (
+                               <button
+                                 key={t}
+                                 onClick={() => {
+                                   setTone(t);
+                                   setGlobalTone(t);
+                                 }}
+                                 className={`flex-1 p-2 rounded-lg border transition-colors ${tone === t ? 'bg-primary text-background font-semibold' : 'bg-[#1A1A1A] text-secondary-text hover:border-primary border-transparent'}`}
+                               >
+                                 {t}
+                               </button>
+                             ))}
                            </div>
                          </div>
                        </div>

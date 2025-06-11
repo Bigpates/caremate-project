@@ -15,10 +15,14 @@ This project is a Next.js application.
 2. Edit `.env` and provide values for the following variables:
    - `OPENAI_API_KEY` – your OpenAI API key.
    - `ALLOWED_ORIGINS` – comma-separated list of URLs allowed to access the backend.
+   - `PORT` – port for the Express server (defaults to `3001`).
 
 ## Running the Backend
 
-- `node server.js` – start the Express server directly.
+The Express server reads the `PORT` environment variable. If not set, it
+defaults to `3001`.
+
+- `node server.js` – start the server directly.
 - `npm run server` – start it via the provided npm script.
 
 ## Running Tests
@@ -30,3 +34,7 @@ npm test
 ```
 
 This runs all tests under the `__tests__` directory.
+
+## Continuous Integration
+
+This repository includes a GitHub Actions workflow that runs `npm ci` and `npm test` on every push and pull request. When branch protection is enabled, a failing workflow will prevent the merge.
