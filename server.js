@@ -60,6 +60,12 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Care Mate backend server listening on http://localhost:${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(
+      `Care Mate backend server listening on http://localhost:${port}`
+    );
+  });
+}
+
+module.exports = app;
