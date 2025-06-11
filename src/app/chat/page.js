@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import TextareaAutosize from 'react-textarea-autosize';
 import Markdown from 'markdown-to-jsx';
 
@@ -23,10 +24,20 @@ const commonRequests = [ { title: "Review My Plan", template: "I need help prepa
 const PromptBubble = ({ title, subtitle, onClick }) => ( <button onClick={onClick} className="text-left bg-[#1A1A1A] p-4 rounded-lg border border-white/10 w-full transition-all duration-300 hover:border-white/20 hover:bg-white/5 hover:scale-105"> <p className="font-semibold text-primary-text">{title}</p> <p className="text-sm text-secondary-text">{subtitle}</p> </button> );
 
 export default function ChatPage() {
+  const searchParams = useSearchParams();
+  const role = searchParams.get('role') || 'Participant';
+  const goal = searchParams.get('goal') || 'Draft a progress letter';
+  const prompt = searchParams.get('prompt');
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (prompt) {
+      setInputValue(prompt);
+    }
+  }, [prompt]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -34,18 +45,65 @@ export default function ChatPage() {
     }
   }, [messages, isLoading]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     const trimmedInput = inputValue.trim();
     if (trimmedInput === '') return;
 
-    setMessages(prev => [...prev, { role: 'user', content: trimmedInput }]);
+    const userMessage = { role: 'user', content: trimmedInput };
+    const newMessages = [...messages, userMessage];
+    // Add placeholder assistant message for streaming updates
+    setMessages([...newMessages, { role: 'assistant', content: '' }]);
     setInputValue('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: "This is a mocked response demonstrating the new message bubble style. The real AI responses will be implemented with the backend." }]);
+    try {
+      const response = await fetch('http://localhost:3001/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newMessages, role })
+      });
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantText = '';
+      if (reader) {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.replace('data: ', ''));
+                if (data.content) {
+                  assistantText += data.content;
+                  setMessages(prev => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = { role: 'assistant', content: assistantText };
+                    return updated;
+                  });
+                }
+              } catch (e) {
+                console.error('Failed to parse SSE chunk', e);
+              }
+            }
+          }
+        }
+      } else {
+        const data = await response.json();
+        assistantText = data.content || '';
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'assistant', content: assistantText };
+          return updated;
+        });
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -65,8 +123,8 @@ export default function ChatPage() {
             New Chat
         </button>
         <div className="p-4 rounded-lg bg-black/20 border border-white/10">
-            <div className="flex items-start gap-2"> <UserIcon /> <p className="text-sm"><span className="text-secondary-text">You're a:</span><br/><span className="font-bold text-primary-text">Support Coordinator</span></p> </div>
-            <div className="flex items-start gap-2 mt-3"> <GoalIcon /> <p className="text-sm"><span className="text-secondary-text">Your Goal:</span><br/><span className="font-bold text-primary-text">Draft a progress letter</span></p> </div>
+            <div className="flex items-start gap-2"> <UserIcon /> <p className="text-sm"><span className="text-secondary-text">You're a:</span><br/><span className="font-bold text-primary-text">{role}</span></p> </div>
+            <div className="flex items-start gap-2 mt-3"> <GoalIcon /> <p className="text-sm"><span className="text-secondary-text">Your Goal:</span><br/><span className="font-bold text-primary-text">{goal}</span></p> </div>
         </div>
         <div className="flex-1 mt-6 overflow-y-auto">
             <h2 className="px-2 mb-2 text-sm font-semibold text-secondary-text">Recent</h2>
