@@ -1,5 +1,13 @@
 'use client';
 
+
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import TextareaAutosize from 'react-textarea-autosize';
+import Markdown from 'markdown-to-jsx';
+import ChatHistory from '../../components/ChatHistory';
+=======
 import React, { useState, useEffect, useRef } from 'react';
 import SettingsModal from '@/components/SettingsModal';
 import { useChatSettings } from '@/context/ChatSettingsContext';
@@ -7,6 +15,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import TextareaAutosize from 'react-textarea-autosize';
 import Markdown from 'markdown-to-jsx';
+
 
 // --- ICONS ---
 const NewChatIcon = () => <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>;
@@ -19,7 +28,6 @@ const SendIcon = ({ className }) => <svg className={className} viewBox="0 0 24 2
 const BotIcon = () => <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] flex items-center justify-center flex-shrink-0"><SparkleIcon/></div>;
 const SparkleIcon = () => <svg className="h-5 w-5" strokeWidth="2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#FFFFFF"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" stroke="currentColor" strokeLinejoin="round"/><path d="M5 2L6 5L9 6L6 7L5 10L4 7L1 6L4 5L5 2Z" stroke="currentColor" strokeLinejoin="round"/><path d="M19 2L20 5L23 6L20 7L19 10L18 7L15 6L18 5L19 2Z" stroke="currentColor" strokeLinejoin="round"/></svg>;
 
-const chatHistory = [ { id: 1, title: "Understanding my plan budget..." } ];
 const promptStarters = [ { title: "Explain my budget", subtitle: "in simple terms" }, { title: "Help me draft a letter", subtitle: "to my doctor or provider" }, { title: "What are common supports for...", subtitle: "autism, cerebral palsy, etc." }, { title: "How do I prepare?", subtitle: "for a plan review meeting" } ];
 const commonRequests = [ { title: "Review My Plan", template: "I need help preparing for my upcoming NDIS plan review." }, { title: "Generate Incident Report", template: "I need to generate an incident report." }, ];
 
@@ -128,12 +136,28 @@ export default function ChatPage() {
 
   const handlePromptClick = (text) => { setInputValue(text); };
 
+  const handleNewChat = () => {
+    if (messages.length > 0) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+        const first = messages.find((m) => m.role === 'user');
+        const title = (first?.content || 'Chat').slice(0, 40);
+        stored.push({ id: Date.now(), title, messages });
+        localStorage.setItem('chatHistory', JSON.stringify(stored));
+      } catch (e) {
+        console.error('Failed to save chat history', e);
+      }
+    }
+    setMessages([]);
+    setInputValue('');
+  };
+
   return (
     <>
     <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     <div className="flex h-screen bg-background text-primary-text font-sans">
       <aside className="w-80 bg-[#111111] p-4 flex flex-col border-r border-white/10">
-        <button className="flex items-center justify-center gap-2 w-full p-3 rounded-full bg-primary-text text-background font-semibold hover:bg-white/80 transition mb-6">
+        <button onClick={handleNewChat} className="flex items-center justify-center gap-2 w-full p-3 rounded-full bg-primary-text text-background font-semibold hover:bg-white/80 transition mb-6">
             <NewChatIcon />
             New Chat
         </button>
@@ -143,7 +167,7 @@ export default function ChatPage() {
         </div>
         <div className="flex-1 mt-6 overflow-y-auto">
             <h2 className="px-2 mb-2 text-sm font-semibold text-secondary-text">Recent</h2>
-            <nav className="flex flex-col mb-6 space-y-1"> {chatHistory.map(chat => ( <a key={chat.id} href="#" className="p-2 text-sm truncate rounded-lg text-secondary-text hover:bg-white/5 hover:text-primary-text transition-colors">{chat.title}</a> ))} </nav>
+            <ChatHistory />
             <h2 className="px-2 mb-2 text-sm font-semibold text-secondary-text">Common Requests</h2>
             <nav className="flex flex-col space-y-1"> {commonRequests.map(request => ( <button key={request.title} onClick={() => handlePromptClick(request.template)} className="p-2 text-sm text-left truncate rounded-lg text-secondary-text hover:bg-white/5 hover:text-primary-text transition-colors">{request.title}</button>))} </nav>
         </div>
