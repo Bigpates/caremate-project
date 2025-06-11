@@ -4,7 +4,8 @@ const OpenAI = require('openai');
 const cors = require('cors');
 
 const app = express();
-const port = 3001;
+// Allow overriding the server port via environment variable
+const port = process.env.PORT || 3001;
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
