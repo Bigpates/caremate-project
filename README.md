@@ -8,6 +8,18 @@ This project is a Next.js application.
 - `npm run build` – build for production.
 - `npm start` – start the production server.
 
+## Environment Setup
+
+1. Copy `.env.example` to `.env`.
+2. Edit `.env` and provide values for the following variables:
+   - `OPENAI_API_KEY` – your OpenAI API key.
+   - `ALLOWED_ORIGINS` – comma-separated list of URLs allowed to access the backend.
+
+## Running the Backend
+
+- `node server.js` – start the Express server directly.
+- `npm run server` – start it via the provided npm script.
+
 ## Running Tests
 
 Jest and React Testing Library are used for unit tests. Execute:
