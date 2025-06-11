@@ -7,6 +7,7 @@ This project is a Next.js application.
 - `npm run dev` – start the development server.
 - `npm run build` – build for production.
 - `npm start` – start the production server.
+- `npm run server` – run the Express API server.
 
 ## Running Tests
 
