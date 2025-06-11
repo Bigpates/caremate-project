@@ -28,9 +28,11 @@ export default function ChatPage() {
   const role = searchParams.get('role') || 'Participant';
   const goal = searchParams.get('goal') || 'Draft a progress letter';
   const prompt = searchParams.get('prompt');
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
@@ -57,11 +59,17 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/chat', {
+      setError('');
+      const response = await fetch(`${apiUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newMessages, role })
       });
+
+      if (!response.ok) {
+        setError('Failed to send message.');
+        return;
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -101,6 +109,7 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      setError('Error sending message.');
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +187,8 @@ export default function ChatPage() {
                 <TextareaAutosize placeholder="Ask anything..." className="flex-1 w-full px-2 py-2 bg-transparent focus:outline-none placeholder:text-secondary-text resize-none" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyDown} maxRows={5}/>
                 <button onClick={handleSendMessage} disabled={isLoading} className="p-3 transition-all duration-300 bg-primary-text rounded-full text-background self-end group-hover:bg-primary group-hover:text-background group-focus-within:bg-primary group-focus-within:bg-background disabled:bg-gray-500"> <SendIcon className="h-5 w-5"/> </button>
             </div>
-             <p className="mt-3 text-xs text-center text-secondary-text">Care Mate can make mistakes. Consider checking important information.</p>
+            {error && <p className="mt-3 text-sm text-center text-red-500">{error}</p>}
+            <p className="mt-3 text-xs text-center text-secondary-text">Care Mate can make mistakes. Consider checking important information.</p>
         </div>
       </main>
     </div>
