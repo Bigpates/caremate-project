@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import TextareaAutosize from 'react-textarea-autosize';
 import Markdown from 'markdown-to-jsx';
+import { motion } from 'framer-motion';
+import ParticleBackground from '@/components/ParticleBackground';
 
 // --- ICONS ---
 const NewChatIcon = () => <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>;
@@ -126,6 +128,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-background text-primary-text font-sans">
+      <ParticleBackground />
       <aside className="w-80 bg-[#111111] p-4 flex flex-col border-r border-white/10">
         <button className="flex items-center justify-center gap-2 w-full p-3 rounded-full bg-primary-text text-background font-semibold hover:bg-white/80 transition mb-6">
             <NewChatIcon />
@@ -159,13 +162,19 @@ export default function ChatPage() {
           ) : (
             <div className="space-y-8 max-w-4xl mx-auto w-full">
               {messages.map((msg, index) => (
-                <div key={index} className={`flex gap-4 items-start ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                  {msg.role === 'assistant' && <BotIcon />}
-                  <div className={`p-4 rounded-2xl max-w-2xl prose prose-invert prose-p:my-2 prose-li:my-1 prose-pre:bg-black/20 ${msg.role === 'user' ? 'bg-primary-text text-background font-bold' : 'bg-[#1A1A1A]'}`}>
-                    <Markdown>{msg.content}</Markdown>
-                  </div>
-                </div>
-              ))}
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className={`flex gap-4 items-start ${msg.role === 'user' ? 'justify-end' : ''}`}
+                  >
+                    {msg.role === 'assistant' && <BotIcon />}
+                    <div className={`p-4 rounded-2xl max-w-2xl prose prose-invert prose-p:my-2 prose-li:my-1 prose-pre:bg-black/20 ${msg.role === 'user' ? 'bg-primary-text text-background font-bold' : 'bg-[#1A1A1A]'}`}>
+                      <Markdown>{msg.content}</Markdown>
+                    </div>
+                  </motion.div>
+                ))}
               {isLoading && (
                 <div className="flex gap-4 items-start">
                   <BotIcon />
@@ -185,7 +194,14 @@ export default function ChatPage() {
                 <button className="p-2 transition-colors text-secondary-text hover:text-primary-text"><PaperclipIcon /></button>
                 <button className="p-2 transition-colors text-secondary-text hover:text-primary-text"><MicIcon /></button>
                 <TextareaAutosize placeholder="Ask anything..." className="flex-1 w-full px-2 py-2 bg-transparent focus:outline-none placeholder:text-secondary-text resize-none" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyDown} maxRows={5}/>
-                <button onClick={handleSendMessage} disabled={isLoading} className="p-3 transition-all duration-300 bg-primary-text rounded-full text-background self-end group-hover:bg-primary group-hover:text-background group-focus-within:bg-primary group-focus-within:bg-background disabled:bg-gray-500"> <SendIcon className="h-5 w-5"/> </button>
+                <motion.button
+                  onClick={handleSendMessage}
+                  disabled={isLoading}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-3 transition-all duration-300 bg-primary-text rounded-full text-background self-end group-hover:bg-primary group-hover:text-background group-focus-within:bg-primary group-focus-within:bg-background disabled:bg-gray-500"
+                >
+                  <SendIcon className="h-5 w-5"/>
+                </motion.button>
             </div>
             {error && <p className="mt-3 text-sm text-center text-red-500">{error}</p>}
             <p className="mt-3 text-xs text-center text-secondary-text">Care Mate can make mistakes. Consider checking important information.</p>
